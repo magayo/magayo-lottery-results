@@ -8,17 +8,17 @@
  * registers the activation and deactivation functions, and defines a function
  * that starts the plugin.
  *
- * @link              http://www.magayo.com
+ * @link              https://www.magayo.com
  * @since             1.0.0
  * @package           Magayo_Lottery_Results
  *
  * @wordpress-plugin
  * Plugin Name:       magayo Lottery Results
- * Plugin URI:        http://www.magayo.com
- * Description:       Display lottery results for lottery games across the world.
- * Version:           1.0.0
+ * Plugin URI:        https://www.magayo.com
+ * Description:       Display lottery results and jackpots for lottery games across the world.
+ * Version:           2.0.0
  * Author:            magayo
- * Author URI:        http://www.magayo.com
+ * Author URI:        https://www.magayo.com
  * License:           GPLv2 or later
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       magayo-lottery-results

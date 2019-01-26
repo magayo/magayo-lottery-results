@@ -3,7 +3,7 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results

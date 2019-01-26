@@ -3,7 +3,7 @@
 /**
  * Fired during plugin deactivation
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results
@@ -34,6 +34,12 @@ class Magayo_Lottery_Results_Deactivator {
 		if (wp_next_scheduled('magayo_lottery_results_cron')) {
 			$timestamp = wp_next_scheduled('magayo_lottery_results_cron');
 			wp_unschedule_event($timestamp, 'magayo_lottery_results_cron');
+		}
+
+		// Version 2: Remove jackpots cron
+		if (wp_next_scheduled('magayo_lottery_jackpots_cron')) {
+			$timestamp = wp_next_scheduled('magayo_lottery_jackpots_cron');
+			wp_unschedule_event($timestamp, 'magayo_lottery_jackpots_cron');
 		}
 
 		if (get_option('magayo-lottery-results') != false)

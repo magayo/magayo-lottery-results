@@ -6,7 +6,7 @@
  * A class definition that includes attributes and functions used across both the
  * public-facing side of the site and the admin area.
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results
@@ -69,7 +69,9 @@ class Magayo_Lottery_Results {
 	public function __construct() {
 
 		$this->plugin_name = 'magayo-lottery-results';
-		$this->version = '1.0.0';
+		
+		// *** Update version ***
+		$this->version = '2.0.0';
 
 		$this->load_dependencies();
 		$this->set_locale();
@@ -168,6 +170,9 @@ class Magayo_Lottery_Results {
 		$this->loader->add_action( 'admin_init', $plugin_admin, 'options_update');
 		$this->loader->add_action ('magayo_lottery_results_cron', $plugin_admin, 'get_results'); 
 
+		// Version 2: Add jackpots
+		$this->loader->add_action ('magayo_lottery_jackpots_cron', $plugin_admin, 'get_jackpots'); 
+		
 		$plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
 		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
 		

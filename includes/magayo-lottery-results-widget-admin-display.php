@@ -5,7 +5,7 @@
  *
  * This file is used to markup the admin-facing aspects of the widget.
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results

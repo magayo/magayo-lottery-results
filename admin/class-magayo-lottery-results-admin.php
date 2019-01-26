@@ -3,7 +3,7 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results
@@ -182,6 +182,10 @@ class Magayo_Lottery_Results_Admin {
 		else
 			$tag_game = false;
 		
+		// Version 2: Add jackpots
+		$supported_jackpots = $options['supported_jackpots'];
+		$selected_jackpots = $options['selected_jackpots'];
+		
 		$count_selected_games = 0;
 		$form_selected_games = array();
 		$form_selected_names = array();
@@ -198,6 +202,26 @@ class Magayo_Lottery_Results_Admin {
 				array_push($form_selected_names, $temp_name);
 				array_push($form_selected_values, $temp_value);
 				$count_selected_games++;
+			}
+		}
+		
+		// Version 2: Add jackpots
+		$count_selected_jackpots = 0;
+		$form_selected_jackpots = array();
+		$form_selected_jackpot_names = array();
+		$form_selected_jackpot_values = array();
+		
+		if (strlen($selected_jackpots) > 10) {
+			$form_selected_jackpots = preg_split("/;/", $selected_jackpots);
+			
+			for ($i=0; $i<count($form_selected_jackpots); $i++) {
+				$temp = $form_selected_jackpots[$i];
+				$temp_pos = strpos($temp, "=");
+				$temp_name = substr($temp, 0, $temp_pos);
+				$temp_value = substr($temp, ($temp_pos+1));
+				array_push($form_selected_jackpot_names, $temp_name);
+				array_push($form_selected_jackpot_values, $temp_value);
+				$count_selected_jackpots++;
 			}
 		}
 		
@@ -226,9 +250,16 @@ class Magayo_Lottery_Results_Admin {
 						if ( $this->process_api_key($api_key, $supported_games, $notify_message) ) {
 							$options['api_key'] = $api_key;
 							$options['supported_games'] = $supported_games;
-							update_option( $this->plugin_name, $options );
 							
-							$notify_success = true;
+							// Version 2: Get supported jackpots
+							if ( $this->process_api_key_jackpots($api_key, $supported_jackpots, $notify_message) ) {
+								$options['supported_jackpots'] = $supported_jackpots;
+								update_option( $this->plugin_name, $options );
+								
+								$notify_success = true;
+							} else {
+								$notify_error = true;
+							}
 						} else {
 							$notify_error = true;
 						}
@@ -322,7 +353,7 @@ class Magayo_Lottery_Results_Admin {
 					
 					unset($form_selected_games);
 					unset($form_selected_names);
-					unset($selected_values);
+					unset($form_selected_values);
 
 					$notify_success = true;
 					
@@ -338,6 +369,112 @@ class Magayo_Lottery_Results_Admin {
 				} else {
 					$notify_info = true;
 					$notify_message = "You have not selected any game.";
+				}
+			} else {
+				$notify_error = true;
+				$notify_message = "Oops, it appears that you do not have the privilege to make changes.";				
+			}
+
+		// Version 2: Add jackpots
+		} elseif (isset($_POST['submit_refresh_jackpots'])) {
+			if ( current_user_can( 'manage_options' ) ) {
+				if (strlen($api_key) == 18) {
+					if ( $this->process_api_key_jackpots($api_key, $supported_jackpots, $notify_message) ) {
+						$options['supported_jackpots'] = $supported_jackpots;
+						update_option( $this->plugin_name, $options );
+						
+						$notify_success = true;
+						$notify_message = 'List of supported jackpots refreshed successfully.';
+					} else {
+						$notify_error = true;
+					}
+				}
+			} else {
+				$notify_error = true;
+				$notify_message = "Oops, it appears that you do not have the privilege to make changes.";				
+			}
+			
+		} elseif (isset($_POST['submit_add_jackpot'])) {
+			if ( current_user_can( 'manage_options' ) ) {
+				if (isset($_POST['supported_jackpots'])) {
+					$selected_jackpot = sanitize_text_field($_POST['supported_jackpots']);
+					
+					if (strlen($selected_jackpot) > 10) {					
+						$found = false;
+						for ($i=0; $i<count($form_selected_jackpots); $i++) {
+							if (strcmp($form_selected_jackpots[$i], $selected_jackpot) == 0) {
+								$found = true;
+								break;
+							}
+						}
+						
+						if (!$found) {
+							$temp_pos = strpos($selected_jackpot, "=");
+							$temp_name = substr($selected_jackpot, 0, $temp_pos);
+							$temp_value = substr($selected_jackpot, ($temp_pos+1));
+							
+							array_push($form_selected_jackpots, $selected_jackpot);
+							array_push($form_selected_jackpot_names, $temp_name);
+							array_push($form_selected_jackpot_values, $temp_value);
+							$count_selected_jackpots++;
+							
+							if (strlen($selected_jackpots) > 10)
+								$selected_jackpots = $selected_jackpots . ";" . $selected_jackpot;
+							else
+								$selected_jackpots = $selected_jackpot;
+							
+							$options['selected_jackpots'] = $selected_jackpots;
+							update_option( $this->plugin_name, $options );
+				
+							if (wp_next_scheduled('magayo_lottery_jackpots_cron')) {
+								$timestamp = wp_next_scheduled('magayo_lottery_jackpots_cron');
+								wp_unschedule_event($timestamp, 'magayo_lottery_jackpots_cron');
+							}
+							
+							wp_schedule_event( time(), $cron_frequency, 'magayo_lottery_jackpots_cron' );
+							
+							$notify_success = true;
+							$notify_message = $temp_name . ' jackpot added.';
+						} else {
+							$temp_pos = strpos($selected_jackpot, "=");
+							$temp_name = substr($selected_jackpot, 0, $temp_pos);
+							$temp_value = substr($selected_jackpot, ($temp_pos+1));
+
+							$notify_info = true;
+							$notify_message = 'You had already selected ' . $temp_name . '.';
+						}
+					}
+				}
+			} else {
+				$notify_error = true;
+				$notify_message = "Oops, it appears that you do not have the privilege to make changes.";				
+			}
+			
+		} elseif (isset($_POST['submit_clear_jackpot_selection'])) {
+			if ( current_user_can( 'manage_options' ) ) {
+				if ($count_selected_jackpots > 0) {
+					$selected_jackpots = '';
+					$options['selected_jackpots'] = $selected_jackpots;
+					update_option( $this->plugin_name, $options );
+					
+					unset($form_selected_jackpots);
+					unset($form_selected_jackpot_names);
+					unset($form_selected_jackpot_values);
+
+					$notify_success = true;
+					
+					if ($count_selected_jackpots > 1)
+						$notify_message = "Your selected jackpots have been removed.";				
+					else
+						$notify_message = "Your selected jackpot has been removed.";				
+						
+					$count_selected_jackpots = 0;
+					$form_selected_jackpots = array();
+					$form_selected_names = array();
+					$form_selected_values = array();
+				} else {
+					$notify_info = true;
+					$notify_message = "You have not selected any jackpot.";
 				}
 			} else {
 				$notify_error = true;
@@ -360,6 +497,14 @@ class Magayo_Lottery_Results_Admin {
 					}
 					
 					wp_schedule_event( time(), $cron_frequency, 'magayo_lottery_results_cron' );
+				
+					// Version 2: Jackpot cron
+					if (wp_next_scheduled('magayo_lottery_jackpots_cron')) {
+						$timestamp = wp_next_scheduled('magayo_lottery_jackpots_cron');
+						wp_unschedule_event($timestamp, 'magayo_lottery_jackpots_cron');
+					}
+					
+					wp_schedule_event( time(), $cron_frequency, 'magayo_lottery_jackpots_cron' );
 					
 					$notify_success = true;
 					$notify_message = 'Update frequency saved.';
@@ -517,8 +662,70 @@ class Magayo_Lottery_Results_Admin {
 			}
 		}
 		
+		// Version 2: Add jackpots
+		$count_supported_jackpots = 0;
+		$form_supported_jackpots = array();
+		$form_supported_jackpot_names = array();
+		$form_supported_jackpot_values = array();
+		
+		if (strlen($supported_jackpots) > 10) {
+			$form_supported_jackpots = preg_split("/;/", $supported_jackpots);
+			
+			for ($i=0; $i<count($form_supported_jackpots); $i++) {
+				$temp = $form_supported_jackpots[$i];
+				$temp_pos = strpos($temp, "=");
+				$temp_name = substr($temp, 0, $temp_pos);
+				$temp_value = substr($temp, ($temp_pos+1));
+				array_push($form_supported_jackpot_names, $temp_name);
+				array_push($form_supported_jackpot_values, $temp_value);
+				$count_supported_jackpots++;
+			}
+		}
+		
         include_once( 'partials/magayo-lottery-results-admin-display.php' );
 		
+    }
+	
+    /**
+     * Process API key input to retrieve & refresh list of supported jackpots.
+     *
+     * @since    2.0.0
+     */
+    private function process_api_key_jackpots($input, &$games, &$message) {
+		if ( strlen($input) == 18 ) {
+			if ( ctype_alnum($input) ) {
+				$domain = home_url();
+				$domain = preg_replace('#^https?://#', '', $domain);
+				$domain = preg_replace('/^www\./', '', $domain);
+				
+				$base_url = 'https://www.magayo.com/api/wp_jackpots.php?';
+				$url = $base_url . 'api_key=' . $input;
+				$url = $url . '&domain=' . $domain;
+				
+				$response = wp_remote_post($url);
+				
+				if (!is_wp_error($response)) {
+					$json_data = json_decode(wp_remote_retrieve_body($response));
+					
+					if ($json_data->error == 0) {
+						$games = $json_data->games;
+						$message = "API key saved and you can proceed to configure the display settings and select your game(s).";
+						return true;
+					} else {
+						$message = $json_data->error_message;
+						return false;
+					}
+					
+				} else {
+					$http_code = wp_remote_retrieve_response_code( $response );
+					$message = "Unable to connect - " . $http_code . "";
+					return false;
+				}
+			}
+		}
+		
+		$message = 'Please enter a valid API key.';
+		return false;
     }
 	
     /**
@@ -611,6 +818,433 @@ class Magayo_Lottery_Results_Admin {
     }
 	
     /**
+     * Get lottery jackpots for all selected games.
+     *
+     * @since    2.0.0
+     */
+	public function get_jackpots() {
+		
+		$options = get_option($this->plugin_name);
+		$api_key = $options['api_key'];
+		$selected_jackpots = $options['selected_jackpots'];
+		
+		if ($options['show_country'] == 1)
+			$show_country = true;
+		else
+			$show_country = false;
+		
+		if ($options['show_state'] == 1)
+			$show_state = true;
+		else
+			$show_state = false;
+		
+		$language = $options['language'];
+		$date_format = $options['date_format'];
+		
+		if ($options['show_weekday'] == 1)
+			$show_weekday = true;
+		else
+			$show_weekday = false;
+		
+		if ($options['show_bonus_name'] == 1)
+			$show_bonus_name = true;
+		else
+			$show_bonus_name = false;
+
+		$post_user_id = $options['post_user_id'];
+		$post_category = $options['post_category'];
+		
+		if ($options['tag_country'] == 1)
+			$tag_country = true;
+		else
+			$tag_country = false;
+		
+		if ($options['tag_state'] == 1)
+			$tag_state = true;
+		else
+			$tag_state = false;
+		
+		if ($options['tag_game'] == 1)
+			$tag_game = true;
+		else
+			$tag_game = false;
+		
+		$count_selected_jackpots = 0;
+		$form_selected_jackpots = array();
+		$form_selected_jackpot_names = array();
+		$form_selected_jackpot_values = array();
+		
+		if (strlen($selected_jackpots) > 10) {
+			$domain = home_url();
+			$domain = preg_replace('#^https?://#', '', $domain);
+			$domain = preg_replace('/^www\./', '', $domain);
+			
+			// Version 2: Calls wp_results_option
+			$base_url = 'https://www.magayo.com/api/wp_next_jackpot.php?';
+			$url = $base_url . 'api_key=' . $api_key;
+			$url = $url . '&domain=' . $domain;
+			$url = $url . '&game=';
+
+			$form_selected_jackpots = preg_split("/;/", $selected_jackpots);
+			
+			for ($i=0; $i<count($form_selected_jackpots); $i++) {
+				$temp = $form_selected_jackpots[$i];
+				$temp_pos = strpos($temp, "=");
+				$temp_name = substr($temp, 0, $temp_pos);
+				$temp_value = substr($temp, ($temp_pos+1));
+				array_push($form_selected_jackpot_names, $temp_name);
+				array_push($form_selected_jackpot_values, $temp_value);
+				$count_selected_jackpots++;
+				
+				$temp_url = $url . $temp_value;
+				$response = wp_remote_post($temp_url);
+				
+				if (!is_wp_error($response)) {
+					$json_data = json_decode(wp_remote_retrieve_body($response));
+					
+					if ($json_data->error == 0) {
+						$json_next_draw = $json_data->next_draw;
+						$json_currency = $json_data->currency;
+						$jason_jackpot = $json_data->jackpot;
+						
+						if ($this->post_jackpot_exists($temp_name, $show_country, $show_state, $language, $date_format, $json_next_draw)) {
+							if (WP_DEBUG) {
+								$log_message = $temp_value . " jackpot: " . $json_next_draw . " - Already posted.";
+								error_log($log_message);
+							}
+						} else {						
+							if (WP_DEBUG) {
+								$log_message = $temp_value . "jackpot : " . $json_next_draw . " - " . $json_currency . "," . $jason_jackpot;
+								error_log($log_message);
+							}
+							
+							$this->post_lotto_jackpot($temp_name, $show_country, $show_state, $language,
+														$date_format, $show_weekday, $json_next_draw, $json_currency, $jason_jackpot,
+														$post_user_id, $post_category, $tag_country, $tag_state, $tag_game);
+						
+						}
+					} else {
+						if (WP_DEBUG) {
+							$json_error = $json_data->error;
+							$json_error_message = $json_data->error_message;
+							$log_message = "Error (jackpot): " . $json_error . " - " . $json_error_message;
+							error_log($log_message);
+						}
+					}
+				} else {
+					if (WP_DEBUG) {
+						$http_code = wp_remote_retrieve_response_code( $response );
+						$log_message = "HTTP Error (jackpot): " . $http_code;
+						error_log($log_message);
+					}
+				}
+			}
+		} else {
+			if (WP_DEBUG) {
+				$log_message = "No jackpots selected.";
+				error_log($log_message);
+			}			
+		}
+	}
+	
+    /**
+     * Check if jackpot exists to prevent duplicate posts.
+     *
+     * @since    2.0.0
+     */
+	private function post_jackpot_exists($game_name, $show_country, $show_state, $language, $date_format, $next_draw) {
+		
+		$pos1 = strpos($game_name, "/");
+		$country = substr($game_name, 0, $pos1);
+		
+		if ($country == "USA") {
+			$pos2 = strpos($game_name, "/", ($pos1+1));
+			
+			if ($pos2 === false) {
+				$state = '';
+				$game = substr($game_name, ($pos1+1));
+			} else {
+				$state = substr($game_name, ($pos1+1), ($pos2-($pos1+1)));
+				$game = substr($game_name, ($pos2+1));
+			}
+		} else {
+			$state = '';
+			$game = substr($game_name, ($pos1+1));
+		}
+		
+		$post_title = '';
+		
+		if ($show_country) {
+			$post_title = $country;
+		}
+		
+		if ($show_state) {
+			if (strlen($state) > 0) {
+				if (strlen($post_title) > 0) {
+					$post_title = $post_title . " " . $state;
+				} else {
+					$post_title = $state;
+				}
+			}
+		}
+		
+		if (strlen($post_title) > 0) {
+			$post_title = $post_title . " " . $game . " Jackpot";
+		} else {
+			$post_title = $game . " Jackpot";
+		}
+		
+		list ($year, $month, $day) = preg_split("/-/", $next_draw); 
+		
+		if(!checkdate($month, $day, $year)) {
+			if (WP_DEBUG) {
+				$log_message = $game . ": Invalid next draw - " . $next_draw;
+				error_log($log_message);
+			}
+			
+			return;
+		}
+
+		$draw_datetime = mktime(0, 0, 0, $month, $day, $year);
+		$draw = date($date_format, $draw_datetime);
+		
+		if ($draw == false) {
+			$draw = $next_draw;
+			
+			if (WP_DEBUG) {
+				$log_message = $game . ": Error formatting next draw date - " . $next_draw;
+				error_log($log_message);
+			}
+		}
+		
+		$post_title = $post_title . " - " . $draw;		
+		$post_title = preg_replace('/ & /', ' ', $post_title);
+		
+		$page = get_page_by_title($post_title, OBJECT, 'post');
+
+		if (isset($page) && !empty($page) )
+			return true;
+			
+		return false;
+		
+	}
+
+    /**
+     * Insert post for Lotto jackpot.
+     *
+     * @since    2.0.0
+     */
+	private function post_lotto_jackpot($game_name, $show_country, $show_state, $language,
+										$date_format, $show_weekday, $next_draw, $currency, $jackpot,
+										$post_user_id, $post_category, $tag_country, $tag_state, $tag_game) {
+		
+		$pos1 = strpos($game_name, "/");
+		$country = substr($game_name, 0, $pos1);
+		
+		if ($country == "USA") {
+			$pos2 = strpos($game_name, "/", ($pos1+1));
+			
+			if ($pos2 === false) {
+				$state = '';
+				$game = substr($game_name, ($pos1+1));
+			} else {
+				$state = substr($game_name, ($pos1+1), ($pos2-($pos1+1)));
+				$game = substr($game_name, ($pos2+1));
+			}
+		} else {
+			$state = '';
+			$game = substr($game_name, ($pos1+1));
+		}
+		
+		$post_title = '';
+		
+		if ($show_country) {
+			$post_title = $country;
+		}
+		
+		if ($show_state) {
+			if (strlen($state) > 0) {
+				if (strlen($post_title) > 0) {
+					$post_title = $post_title . " " . $state;
+				} else {
+					$post_title = $state;
+				}
+			}
+		}
+		
+		// Version 2: Set alignment via CSS
+		$post_content = '<p class="lotto-jackpot-header">';
+
+		if (strlen($post_title) > 0)
+			$post_content = $post_content . "Next " . $post_title . " " . $game . " Jackpot";
+		else
+			$post_content = $post_content . "Next " . $game . " Jackpot";
+		
+		if (strlen($post_title) > 0) {
+			$post_title = $post_title . " " . $game . " Jackpot";
+		} else {
+			$post_title = $game . " Jackpot";
+		}
+
+		$post_content = $post_content . "</p>";
+
+		$post_content = $post_content . '<p class="lotto-jackpot-date">';
+		
+		list ($year, $month, $day) = preg_split("/-/", $next_draw); 
+		
+		if(!checkdate($month, $day, $year)) {
+			if (WP_DEBUG) {
+				$log_message = $game . ": Invalid next draw - " . $next_draw;
+				error_log($log_message);
+			}
+			
+			return;
+		}
+
+		$post_date = date("Y-m-d H:i:s");
+
+		$draw_datetime = mktime(0, 0, 0, $month, $day, $year);
+		$draw = date($date_format, $draw_datetime);
+		
+		if ($draw == false) {
+			$draw = $next_draw;
+			
+			if (WP_DEBUG) {
+				$log_message = $game . ": Error formatting next draw date - " . $next_draw;
+				error_log($log_message);
+			}
+		}
+		
+		$post_title = $post_title . " - " . $draw;
+		$post_title = preg_replace('/ & /', ' ', $post_title);
+		$post_content = $post_content . $draw;
+		
+		if ($show_weekday) {
+			$draw_day = date("l", $draw_datetime);
+			$post_content = $post_content . " (" . $draw_day . ")";
+		}
+
+		$post_content = $post_content . "</p>";
+		$post_content = $post_content . '<p class="lotto-jackpot-amount">';
+		
+		$format_jackpot = number_format($jackpot);
+		
+		if ($currency == "EUR")
+			$post_content = $post_content . "&euro;" . $format_jackpot;
+		elseif ($currency == "BRL")
+			$post_content = $post_content . "R$" . $format_jackpot;
+		elseif ($currency == "CHF")
+			$post_content = $post_content . "CHF " . $format_jackpot;
+		elseif ($currency == "GBP")
+			$post_content = $post_content . "&pound;" . $format_jackpot;
+		elseif ($currency == "MYR")
+			$post_content = $post_content . "RM " . $format_jackpot;
+		elseif ($currency == "PLN")
+			$post_content = $post_content . $format_jackpot . " zł";
+		elseif ($currency == "SEK")
+			$post_content = $post_content . $format_jackpot . " kr";
+		elseif ($currency == "ZAR")
+			$post_content = $post_content . "R " . $format_jackpot;
+		else
+			$post_content = $post_content . "$" . $format_jackpot;
+		
+		$post_content = $post_content . '</p>';
+		
+		$new_post = array(
+			'post_title' => $post_title,
+			'post_content' => $post_content,
+			'post_status' => 'publish',
+			'post_author' => $post_user_id, 
+			'post_date' => $post_date,
+			'post_type' => 'post',
+			'post_category' => array(0)
+		);
+		
+		$post_id = wp_insert_post($new_post);
+		
+		if ($post_id <= 0) {
+			if (WP_DEBUG) {
+				$log_message = $game . ": Error inserting jackpot - " . $next_draw. ", " . $currency . ", " . $jackpot;
+				error_log($log_message);
+			}
+			
+			return;
+		}
+		
+		if ($post_category == "country-state") {
+			if (strlen($state) > 0)
+				$category = $country . " " . $state . " Lottery Jackpots";
+			else
+				$category = $country . " Lottery Jackpots";
+		} elseif ($post_category == "country") {
+			$category = $country . " Lottery Jackpots";
+		} elseif ($post_category == "state") {
+			if (strlen($state) > 0)
+				$category = $state . " Lottery Jackpots";
+			else
+				$category = $country . " Lottery Jackpots";
+		} else {
+			$category = $game . " Jackpots";
+		}
+		
+		$category = preg_replace('/ & /', ' ', $category);
+		
+		if (is_category($category)) {
+			$category_id = get_cat_ID( $category );
+			
+			if ($category_id <= 0) {
+				if (WP_DEBUG) {
+					$log_message = $game . ": Error getting category ID for jackpot - " . $category;
+					error_log($log_message);
+				}
+			} else {
+				$category_ids = array($category_id);
+				wp_set_post_categories( $post_id, $category_ids, false );
+			}
+		} else {			
+			wp_insert_term( $category, 'category' );
+			$category_id = get_cat_ID( $category );
+
+			if ($category_id <= 0) {
+				if (WP_DEBUG) {
+					$log_message = $game . ": Error creating category for jackpot - " . $category;
+					error_log($log_message);
+				}
+			} else {
+				$category_ids = array($category_id);
+				wp_set_post_categories( $post_id, $category_ids, false );
+			}
+		}
+		
+		$tags = array();
+		
+		if ($tag_country) {
+			$country_tag = strtolower($country);
+			$country_tag = $country_tag . " lottery jackpots";
+			array_push($tags, $country_tag);
+		}
+		
+		if ($tag_state) {
+			if (strlen($state) > 0) {
+				$state_tag = strtolower($state);
+				$state_tag = $state_tag . " lottery jackpots";
+				array_push($tags, $state_tag);
+			}
+		}
+		
+		if ($tag_game) {
+			$game_tag = strtolower($game);
+			$game_tag = $game_tag . " jackpots";
+			array_push($tags, $game_tag);
+		}
+		
+		if (count($tags) > 0) {
+			wp_set_post_tags( $post_id, $tags, false );
+		}
+		
+	}
+
+    /**
      * Get draw results for all selected games.
      *
      * @since    1.0.0
@@ -675,7 +1309,8 @@ class Magayo_Lottery_Results_Admin {
 			$domain = preg_replace('#^https?://#', '', $domain);
 			$domain = preg_replace('/^www\./', '', $domain);
 			
-			$base_url = 'https://www.magayo.com/api/wp_results.php?';
+			// Version 2: Calls wp_results_option
+			$base_url = 'https://www.magayo.com/api/wp_results_option.php?';
 			$url = $base_url . 'api_key=' . $api_key;
 			$url = $url . '&domain=' . $domain;
 			$url = $url . '&game=';
@@ -712,6 +1347,10 @@ class Magayo_Lottery_Results_Admin {
 						$json_draw = $json_data->draw;
 						$json_results = $json_data->results;
 						
+						// Version 2: Add option
+						$json_is_option = $json_data->is_option;
+						$json_option_name = $json_data->option_name;
+						
 						if ($this->post_exists($temp_name, $show_country, $show_state, $language, $date_format, $json_draw)) {
 							if (WP_DEBUG) {
 								$log_message = $temp_value . ": " . $json_draw . " - Already posted.";
@@ -724,10 +1363,11 @@ class Magayo_Lottery_Results_Admin {
 							}
 							
 							if ($json_game_type == "lotto") {
-								$this->post_lotto_results($temp_name, $show_country, $show_state, $language,
+								// Version 2: Add option
+								$this->post_lotto_results_option($temp_name, $show_country, $show_state, $language,
 															$date_format, $show_weekday, $json_draw,
 															$main_color, $json_main_drawn, $bonus_color, $jason_bonus_drawn, 
-															$show_bonus_name, $json_bonus_name, $json_results,
+															$show_bonus_name, $json_bonus_name, $json_is_option, $json_option_name, $json_results,
 															$post_user_id, $post_category, $tag_country, $tag_state, $tag_game);
 							} else {
 								$this->post_pick_results($temp_name, $show_country, $show_state, $language,
@@ -903,9 +1543,12 @@ class Magayo_Lottery_Results_Admin {
 		} else {
 			$post_title = $game;
 		}
-		
-		$post_content = '<p style="text-align: center;">';
-		$post_content = $post_content . "<strong>" . $post_title . "</strong><br />";
+				
+		// Version 2: Set alignment via CSS
+		$post_content = '<p class="pick34-results-header">';
+
+		$post_content = $post_content . "<strong>" . $post_title . "</strong></p>";
+		$post_content = $post_content . '<p class="pick34-results-date">';
 		
 		list ($year, $month, $day) = preg_split("/-/", $draw_date); 
 		
@@ -954,9 +1597,11 @@ class Magayo_Lottery_Results_Admin {
 				$draw_day = $this->format_zh_day($draw_day);
 			}
 
-			$post_content = $post_content . $draw_day . "<br />";
+			$post_content = $post_content . $draw_day . "</p>";
 		}
 		
+		$post_content = $post_content . '<p class="pick34-results-drawn">';
+
 		$drawn = preg_split("/,/", $draw_results);
 		
 		if (count($drawn) < $total_drawn) {
@@ -1114,22 +1759,28 @@ class Magayo_Lottery_Results_Admin {
 		
 		$tags = array();
 		
+		// Version 2: Append results & winning numbers to tags
 		if ($tag_country) {
 			$country_tag = strtolower($country);
-			$country_tag = $country_tag . " lottery";
+			$country_tag = $country_tag . " lottery results";
 			array_push($tags, $country_tag);
 		}
 		
 		if ($tag_state) {
 			if (strlen($state) > 0) {
 				$state_tag = strtolower($state);
-				$state_tag = $state_tag . " lottery";
+				$state_tag = $state_tag . " lottery results";
 				array_push($tags, $state_tag);
 			}
 		}
 		
 		if ($tag_game) {
 			$game_tag = strtolower($game);
+			$game_tag = $game_tag . " results";
+			array_push($tags, $game_tag);
+
+			$game_tag = strtolower($game);
+			$game_tag = $game_tag . " winning numbers";
 			array_push($tags, $game_tag);
 		}
 		
@@ -1138,16 +1789,17 @@ class Magayo_Lottery_Results_Admin {
 		}
 		
 	}
-		
+
     /**
      * Insert post for Lotto game.
      *
      * @since    1.0.0
      */
-	private function post_lotto_results($game_name, $show_country, $show_state, $language,
+	// Version 2: Add option
+	private function post_lotto_results_option($game_name, $show_country, $show_state, $language,
 										$date_format, $show_weekday, $draw_date,
 										$main_color, $main_drawn, $bonus_color, $bonus_drawn, 
-										$show_bonus_name, $bonus_name, $draw_results,
+										$show_bonus_name, $bonus_name, $is_option, $option_name, $draw_results,
 										$post_user_id, $post_category, $tag_country, $tag_state, $tag_game) {
 		
 		$pos1 = strpos($game_name, "/");
@@ -1184,7 +1836,9 @@ class Magayo_Lottery_Results_Admin {
 			}
 		}
 		
-		$post_content = '<p style="text-align: center;">';
+		// Version 2: Set alignment via CSS
+		$post_content = '<p class="lotto-results-header">';
+
 		$post_content = $post_content . "<strong>" . $post_title;
 		
 		if ($language == "zh") {
@@ -1211,8 +1865,10 @@ class Magayo_Lottery_Results_Admin {
 			$post_title = $game;
 		}
 
-		$post_content = $post_content . "</strong><br />";
+		$post_content = $post_content . "</strong></p>";
 		
+		$post_content = $post_content . '<p class="lotto-results-date">';
+
 		list ($year, $month, $day) = preg_split("/-/", $draw_date); 
 		
 		if(!checkdate($month, $day, $year)) {
@@ -1260,8 +1916,10 @@ class Magayo_Lottery_Results_Admin {
 				$draw_day = $this->format_zh_day($draw_day);
 			}
 
-			$post_content = $post_content . $draw_day . "<br />";
+			$post_content = $post_content . $draw_day . "</p>";
 		}
+		
+		$post_content = $post_content . '<p class="lotto-results-main">';
 		
 		$total_drawn = $main_drawn + $bonus_drawn;
 		$drawn = preg_split("/,/", $draw_results);
@@ -1284,11 +1942,13 @@ class Magayo_Lottery_Results_Admin {
 			$post_content = $post_content . $temp_img;
 		}
 		
+		$post_content = $post_content . '</p>';
+		$post_content = $post_content . '<p class="lotto-results-bonus">';
+		
 		if ($show_bonus_name) {
-			$post_content = $post_content . "<br />";
-			
 			if (strlen($bonus_name) > 0)
-				$post_content = $post_content . $bonus_name . " ";				
+				// Version 2: bonus ball in next line after bonus name
+				$post_content = $post_content . $bonus_name . "<br />";				
 		}
 		
 		$image_url_prefix = plugins_url() . '/' . $this->plugin_name . '/assets/images/' . $bonus_color . '/ball_';
@@ -1300,7 +1960,25 @@ class Magayo_Lottery_Results_Admin {
 		}
 		
 		$post_content = $post_content . '</p>';
+		$post_content = $post_content . '<p class="lotto-results-multiplier">';
 		
+		// Version 2: Add option
+		if ($is_option == "Y") {
+			if (count($drawn) < ($total_drawn+1)) {
+				if (WP_DEBUG) {
+					$log_message = $game . ": Error in total drawn with option - " . $total_drawn . ", " . $draw_results;
+					error_log($log_message);
+				}
+				
+				return;
+			}
+			
+			$temp_option = $option_name . ": " . $drawn[$total_drawn];
+			$post_content = $post_content . $temp_option;
+		}
+		
+		$post_content = $post_content . '</p>';
+
 		$new_post = array(
 			'post_title' => $post_title,
 			'post_content' => $post_content,
@@ -1372,22 +2050,28 @@ class Magayo_Lottery_Results_Admin {
 		
 		$tags = array();
 		
+		// Version 2: Append results & winning numbers to tags
 		if ($tag_country) {
 			$country_tag = strtolower($country);
-			$country_tag = $country_tag . " lottery";
+			$country_tag = $country_tag . " lottery results";
 			array_push($tags, $country_tag);
 		}
 		
 		if ($tag_state) {
 			if (strlen($state) > 0) {
 				$state_tag = strtolower($state);
-				$state_tag = $state_tag . " lottery";
+				$state_tag = $state_tag . " lottery results";
 				array_push($tags, $state_tag);
 			}
 		}
 		
 		if ($tag_game) {
 			$game_tag = strtolower($game);
+			$game_tag = $game_tag . " results";
+			array_push($tags, $game_tag);
+
+			$game_tag = strtolower($game);
+			$game_tag = $game_tag . " winning numbers";
 			array_push($tags, $game_tag);
 		}
 		
@@ -1396,7 +2080,7 @@ class Magayo_Lottery_Results_Admin {
 		}
 		
 	}
-		
+
     /**
      * Add settings action link to the plugins page.
      *

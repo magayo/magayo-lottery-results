@@ -3,21 +3,25 @@
 /**
  * Provide a admin area view for the plugin - Getting started tab
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results
  * @subpackage Magayo_Lottery_Results/admin/partials
  */
+ 
+// Version 2: Highlight (bold) API key sent to email
 ?>
 
 <div id="getting-started" class="wrap metabox-holder columns-2 magayo-lottery-results-metaboxes">
 
 	<h2><?php _e( 'API Account Registration', $this->plugin_name ); ?></h2>
-        <p><?php _e('Please register for an API account and the API key will be sent to your email address. The API key is required to retrieve the list of supported lottery games and the draw results.', $this->plugin_name);?></p>
-        <p><?php _e('Data is exchanged securely with our web server @ magayo.com via SSL.', $this->plugin_name);?></p>
-        <p><?php _e('We respect your privacy and your email will never be provided to a third-party. You may like to refer to our <a href="http://www.magayo.com/privacy-policy/" target="_blank">Privacy Policy</a>.', $this->plugin_name);?></p>
-        <p><?php _e('By registering for an API account, you agree to our <a href="http://www.magayo.com/site-terms/" target="_blank">terms of use</a>.', $this->plugin_name);?></p>
+        <p><?php _e('Please register for an API account and <strong>the API key will be sent to your email address</strong>. The API key is required to retrieve the draw results and lottery jackpots.', $this->plugin_name);?><br />
+        <?php _e('Data is exchanged securely with our web server @ magayo.com via SSL.', $this->plugin_name);?><br />
+        <?php _e('We respect your privacy and your email will never be provided to a third-party. You may like to refer to our <a href="https://www.magayo.com/privacy-policy/" target="_blank">Privacy Policy</a>.', $this->plugin_name);?><br />
+        <?php _e('By registering for an API account, you agree to our <a href="https://www.magayo.com/site-terms/" target="_blank">terms of use</a>.', $this->plugin_name);?></p>
+        <p><?php _e('Step 1: Enter your email and click Save. The API key will be sent to your email address. You may like to check your spam folder if you do not notice our email.', $this->plugin_name);?></p>
+        <p><?php _e('Step 2: After retrieving your API key, enter your API key and click Save. You can then proceed to configure the display and select the lottery games.', $this->plugin_name);?></p>
 
 	<table class="form-table">
 		<tr>

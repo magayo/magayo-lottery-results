@@ -3,12 +3,14 @@
 /**
  * Provide a admin area view for the plugin - Display settings tab
  *
- * @link       http://www.magayo.com
+ * @link       https://www.magayo.com
  * @since      1.0.0
  *
  * @package    Magayo_Lottery_Results
  * @subpackage Magayo_Lottery_Results/admin/partials
  */
+ 
+// Version 2: Add example in tag selection
 ?>
 
 <div id="display-settings" class="wrap metabox-holder columns-2 magayo-lottery-results-metaboxes hidden">
@@ -44,19 +46,19 @@
 			</td>
 			<td>
 				<select id="date_format" name="date_format" <?php if ($count_supported_games <= 0) echo 'disabled'; ?> /> >
-					<option value="Y-m-d" <?php if ($date_format == "Y-m-d" ) echo 'selected'; ?> >YYYY-MM-DD (2016-09-28)</option>
-					<option value="Y/m/d" <?php if ($date_format == "Y/m/d" ) echo 'selected'; ?> >YYYY/MM/DD (2016/09/28)</option>
-					<option value="Y.m.d" <?php if ($date_format == "Y.m.d" ) echo 'selected'; ?> >YYYY.MM.DD (2016.09.28)</option>
-					<option value="m-d-Y" <?php if ($date_format == "m-d-Y" ) echo 'selected'; ?> >MM-DD-YYYY (09-28-2016)</option>
-					<option value="m/d/Y" <?php if ($date_format == "m/d/Y" ) echo 'selected'; ?> >MM/DD/YYYY (09/28/2016)</option>
-					<option value="m.d.Y" <?php if ($date_format == "m.d.Y" ) echo 'selected'; ?> >MM.DD.YYYY (09.28.2016)</option>
-					<option value="d-m-Y" <?php if ($date_format == "d-m-Y" ) echo 'selected'; ?> >DD-MM-YYYY (28-09-2016)</option>
-					<option value="d/m/Y" <?php if ($date_format == "d/m/Y" ) echo 'selected'; ?> >DD/MM/YYYY (28/09/2016)</option>
-					<option value="d.m.Y" <?php if ($date_format == "d.m.Y" ) echo 'selected'; ?> >DD.MM.YYYY (28.09.2016)</option>
-					<option value="M-d, Y" <?php if ($date_format == "M-d, Y" ) echo 'selected'; ?> >MMM-DD, YYYY (Sep-28, 2016)</option>
-					<option value="M d, Y" <?php if ($date_format == "M d, Y" ) echo 'selected'; ?> >MMM DD, YYYY (Sep 28, 2016)</option>
-					<option value="d-M-Y" <?php if ($date_format == "d-M-Y" ) echo 'selected'; ?> >DD-MMM-YYYY (28-Sep-2016)</option>
-					<option value="d M Y" <?php if ($date_format == "d M Y" ) echo 'selected'; ?> >DD MMM YYYY (28 Sep 2016)</option>
+					<option value="Y-m-d" <?php if ($date_format == "Y-m-d" ) echo 'selected'; ?> >YYYY-MM-DD (2019-09-28)</option>
+					<option value="Y/m/d" <?php if ($date_format == "Y/m/d" ) echo 'selected'; ?> >YYYY/MM/DD (2019/09/28)</option>
+					<option value="Y.m.d" <?php if ($date_format == "Y.m.d" ) echo 'selected'; ?> >YYYY.MM.DD (2019.09.28)</option>
+					<option value="m-d-Y" <?php if ($date_format == "m-d-Y" ) echo 'selected'; ?> >MM-DD-YYYY (09-28-2019)</option>
+					<option value="m/d/Y" <?php if ($date_format == "m/d/Y" ) echo 'selected'; ?> >MM/DD/YYYY (09/28/2019)</option>
+					<option value="m.d.Y" <?php if ($date_format == "m.d.Y" ) echo 'selected'; ?> >MM.DD.YYYY (09.28.2019)</option>
+					<option value="d-m-Y" <?php if ($date_format == "d-m-Y" ) echo 'selected'; ?> >DD-MM-YYYY (28-09-2019)</option>
+					<option value="d/m/Y" <?php if ($date_format == "d/m/Y" ) echo 'selected'; ?> >DD/MM/YYYY (28/09/2019)</option>
+					<option value="d.m.Y" <?php if ($date_format == "d.m.Y" ) echo 'selected'; ?> >DD.MM.YYYY (28.09.2019)</option>
+					<option value="M-d, Y" <?php if ($date_format == "M-d, Y" ) echo 'selected'; ?> >MMM-DD, YYYY (Sep-28, 2019)</option>
+					<option value="M d, Y" <?php if ($date_format == "M d, Y" ) echo 'selected'; ?> >MMM DD, YYYY (Sep 28, 2019)</option>
+					<option value="d-M-Y" <?php if ($date_format == "d-M-Y" ) echo 'selected'; ?> >DD-MMM-YYYY (28-Sep-2019)</option>
+					<option value="d M Y" <?php if ($date_format == "d M Y" ) echo 'selected'; ?> >DD MMM YYYY (28 Sep 2019)</option>
 				</select>
 			</td>
 		</tr>
@@ -155,10 +157,10 @@
 			</td>
 			<td>
 				<select id="post_category" name="post_category" <?php if ($count_supported_games <= 0) echo 'disabled'; ?> /> >
-					<option value="country-state" <?php if ($post_category == "country-state" ) echo 'selected'; ?> >Country State Lottery (USA New York Lottery)</option>
-					<option value="country" <?php if ($post_category == "country" ) echo 'selected'; ?> >Country Lottery (USA Lottery)</option>
-					<option value="state" <?php if ($post_category == "state" ) echo 'selected'; ?> >State Lottery (New York Lottery)</option>
-					<option value="game" <?php if ($post_category == "game" ) echo 'selected'; ?> >Game (Lotto)</option>
+					<option value="country-state" <?php if ($post_category == "country-state" ) echo 'selected'; ?> >Country State Lottery (Example: USA New York Lottery)</option>
+					<option value="country" <?php if ($post_category == "country" ) echo 'selected'; ?> >Country Lottery (Example: USA Lottery)</option>
+					<option value="state" <?php if ($post_category == "state" ) echo 'selected'; ?> >State Lottery (Example: New York Lottery)</option>
+					<option value="game" <?php if ($post_category == "game" ) echo 'selected'; ?> >Game (Example: Lotto)</option>
 				</select>
 			</td>
 		</tr>
